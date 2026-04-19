@@ -26,3 +26,9 @@ servicePort:
   cluster: 80
   target: 80
   nodePort: 30004
+
+#############
+# Ingress
+#############
+
+ingressClassName: nginx
