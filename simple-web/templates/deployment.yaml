@@ -13,7 +13,7 @@ spec:
         {{- include "simple-web.labels" . | nindent 8 }}
     spec:
       containers:
-        - name: {{ .Values.deploymentName }}
+        - name: {{ .Release.Name }}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           ports:
             - containerPort: {{ .Values.appContainerPort }}
