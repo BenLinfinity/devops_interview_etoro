@@ -1,0 +1,28 @@
+#############
+# Deployment
+#############
+
+replicaCount: 2
+image: 
+  repository: acrinterview.azurecr.io/simple-web
+  tag: latest
+labels:
+  app: simple-web
+
+appContainerPort: 80
+
+#############
+# Pull Secret
+#############
+secretName: acr-pull-secret
+secretType: kubernetes.io/dockerconfigjson
+
+#############
+# Service
+#############
+serviceName: simple-web
+serviceType: NodePort
+servicePort:
+  cluster: 80
+  target: 80
+  nodePort: 30004
