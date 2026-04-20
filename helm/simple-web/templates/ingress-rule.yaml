@@ -17,4 +17,4 @@ spec:
               service:
                 name: {{ .Values.serviceName }}
                 port:
-                  number: {{ .Values.servicePort.cluster }}
+                  number: {{ .Values.serviceClusterPort }}

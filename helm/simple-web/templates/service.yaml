@@ -8,6 +8,5 @@ spec:
   selector:
     {{- include "simple-web.labels" . | nindent 4 }}
   ports:
-    - port: {{ .Values.servicePort.cluster }}
-      targetPort: {{ .Values.servicePort.target }}
-      nodePort: {{ .Values.servicePort.nodePort }}
+    - port: {{ .Values.serviceClusterPort }}
+      targetPort: {{ .Values.serviceTargetPort }}

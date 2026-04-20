@@ -2,10 +2,9 @@
 # Deployment
 #############
 
-replicaCount: 2
-image: 
-  repository: acrinterview.azurecr.io/simple-web
-  tag: latest
+replicaCount: 2 
+imageRepository: acrinterview.azurecr.io/simple-web
+imageTag: latest
 labels:
   app: simple-web
 
@@ -29,11 +28,9 @@ secretType: kubernetes.io/dockerconfigjson
 # Service
 #############
 serviceName: simple-web
-serviceType: NodePort
-servicePort:
-  cluster: 80
-  target: 80
-  nodePort: 30004
+serviceType: ClusterIP
+serviceClusterPort: 80
+serviceTargetPort: 80
 
 #############
 # Ingress
