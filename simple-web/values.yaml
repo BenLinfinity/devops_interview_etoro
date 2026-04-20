@@ -10,6 +10,14 @@ labels:
   app: simple-web
 
 appContainerPort: 80
+# Resources
+deploymentCpuRequests: "200m"
+deploymentMemoryRequests: "128Mi"
+deploymentCpuLimits: "500m"
+deploymentMemoryLimits: "512Mi"
+# Rolling update
+deploymentMaxSurge: "25%"
+deploymentMaxUnavailable: 0
 
 #############
 # Pull Secret
@@ -30,5 +38,13 @@ servicePort:
 #############
 # Ingress
 #############
-
 ingressClassName: nginx
+
+#################
+# KEDA Autoscaler
+#################
+kedaMinReplicaCount: 2
+kedaMaxReplicaCount: 10
+kedaCpuTriggerValue: "70"
+kedaMemoryTriggerValue: "80"
+

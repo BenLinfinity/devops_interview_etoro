@@ -7,6 +7,10 @@ spec:
   selector:
     matchLabels:
       {{- include "simple-web.labels" . | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{ .Values.deploymentMaxSurge}}
+      maxUnavailable: {{ .Values.deploymentMaxUnavailable}}
   template:
     metadata:
       labels:
@@ -17,5 +21,14 @@ spec:
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           ports:
             - containerPort: {{ .Values.appContainerPort }}
+          # tighten later by using a busybox deployment to check actual resource usage
+          resources:
+            requests:
+              cpu: {{ .Values.deploymentCpuRequests }}
+              memory: {{ .Values.deploymentMemoryRequests }}
+            limits:
+              cpu: {{ .Values.deploymentCpuLimits }}
+              memory: {{ .Values.deploymentMemoryLimits }}
+
       imagePullSecrets:
       - name: {{ .Values.secretName }}

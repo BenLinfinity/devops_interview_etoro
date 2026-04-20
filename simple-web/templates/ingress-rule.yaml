@@ -4,6 +4,7 @@ metadata:
   name: {{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
   annotations:
+    # app needs route / ingress needs /benl
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec: 
   ingressClassName: nginx
@@ -12,7 +13,7 @@ spec:
         paths:
           - path: /benl
             pathType: Prefix
-            backend:
+            backend:  
               service:
                 name: {{ .Values.serviceName }}
                 port:
