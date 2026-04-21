@@ -1,11 +1,11 @@
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-  name: {{ .Release.Name }}-autoscaler
+  name: {{ include "simple-web.scaledObjectName" . }}
 spec:
   scaleTargetRef:
-    name: {{ .Release.Name }}
-  minReplicaCount: {{ .Values.kedaMinReplicaCount }}
+    name: {{ include "simple-web.fullname" . }}
+  minReplicaCount: {{ .Values.kedaMinReplicaCount | default 2 }}
   maxReplicaCount: {{ .Values.kedaMaxReplicaCount }}
   triggers:
     - type: cpu
@@ -18,7 +18,7 @@ spec:
         value: {{ .Values.kedaMemoryTriggerValue | quote }}
     - type: cron
       metadata:
-        timezone: "Asia/Jerusalem"
-        start: "0 8 * * *"
-        end: "0 00 * * *"
-        desiredReplicas: "5"
+        timezone: {{ .Values.kedaCronTriggerTimezone | quote }}
+        start: {{ .Values.kedaCronTriggerStart | quote }}
+        end: {{ .Values.kedaCronTriggerEnd | quote }}
+        desiredReplicas: {{ .Values.kedaCronTriggerDesiredReplicas | quote }}

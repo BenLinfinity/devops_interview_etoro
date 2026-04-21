@@ -1,20 +1,19 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "simple-web.fullname" . }}
   annotations:
-    # app needs route / ingress needs /benl
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    # app needs route "/" ingress needs "/benl"
+    nginx.ingress.kubernetes.io/rewrite-target: {{ .Values.ingressTargetPath }}
 spec: 
-  ingressClassName: nginx
+  ingressClassName: {{ .Values.ingressClassName }}
   rules:
     - http:
         paths:
-          - path: /benl
-            pathType: Prefix
+          - path: {{ .Values.ingressRulePath }}
+            pathType: {{ .Values.ingressRulePathType }}
             backend:  
               service:
-                name: {{ .Values.serviceName }}
+                name: {{ include "simple-web.fullname" . }}
                 port:
                   number: {{ .Values.serviceClusterPort }}

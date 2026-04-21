@@ -1,9 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "simple-web.fullname" . }}
 spec:
-  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       {{- include "simple-web.labels" . | nindent 6 }}
@@ -29,6 +28,5 @@ spec:
             limits:
               cpu: {{ .Values.deploymentCpuLimits }}
               memory: {{ .Values.deploymentMemoryLimits }}
-
       imagePullSecrets:
-      - name: {{ .Values.secretName }}
+      - name: {{ include "simple-web.imagePullSecretName" . }}

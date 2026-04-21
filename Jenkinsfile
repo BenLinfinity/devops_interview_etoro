@@ -41,8 +41,8 @@ spec:
     - cat
     tty: true
 """
-        }
-    }
+                }
+            }
         // The stages are nested to allow them to be run inside the pod
             stages {
                 stage('Configure Permissions') {

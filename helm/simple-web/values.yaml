@@ -9,11 +9,13 @@ labels:
   app: simple-web
 
 appContainerPort: 80
+
 # Resources
-deploymentCpuRequests: "200m"
-deploymentMemoryRequests: "128Mi"
-deploymentCpuLimits: "500m"
-deploymentMemoryLimits: "512Mi"
+deploymentCpuRequests: "50m"
+deploymentMemoryRequests: "64Mi"
+deploymentCpuLimits: "200m"
+deploymentMemoryLimits: "128Mi"
+
 # Rolling update
 deploymentMaxSurge: "25%"
 deploymentMaxUnavailable: 0
@@ -21,7 +23,7 @@ deploymentMaxUnavailable: 0
 #############
 # Pull Secret
 #############
-secretName: acr-pull-secret
+secretSuffix: image-pull-secret
 secretType: kubernetes.io/dockerconfigjson
 
 #############
@@ -36,6 +38,9 @@ serviceTargetPort: 80
 # Ingress
 #############
 ingressClassName: nginx
+ingressRulePath: /benl
+ingressRulePathType: Prefix
+ingressTargetPath: /
 
 #################
 # KEDA Autoscaler
@@ -44,4 +49,8 @@ kedaMinReplicaCount: 2
 kedaMaxReplicaCount: 10
 kedaCpuTriggerValue: "70"
 kedaMemoryTriggerValue: "80"
+kedaCronTriggerTimezone: "Asia/Jerusalem"
+kedaCronTriggerStart: "0 8 * * *"
+kedaCronTriggerEnd: "0 00 * * *"
+kedaCronTriggerDesiredReplicas: "5"
 
