@@ -40,6 +40,16 @@ spec:
     command:
     - cat
     tty: true
+  - name: kubeconform
+    image: 'ghcr.io/yannh/kubeconform:v0.7.0-alpine'
+    command:
+    - cat
+    tty: true
+  - name: kube-linter
+    image: 'stackrox/kube-linter:v0.8.3-alpine'
+    command:
+    - cat
+    tty: true
 """
                 }
             }
@@ -60,13 +70,27 @@ spec:
                         checkout scm
                     }
                 }
-                stage('Lint') {
+                stage('Lint and Validate') {
                     steps {
-                        container('kubectl') {
+                        container('kubectl'){
+                            sh 'helm template simple-web ./helm/simple-web --set secretValue=FAKESECRET > rendered.yaml' // Renders the helm chart with fake values to check for syntax errors
                             sh 'helm lint --strict ./helm/simple-web' // Checks helm syntax and missing values
-                            sh 'helm template simple-web ./helm/simple-web | kubectl apply --dry-run=client --validate=strict -f -' // Checks rendered manifests for k8s syntax fails fast
+                        }
+                        container('kubeconform') {
+                            // Checks rendered manifests for k8s syntax, and schemas including custom KEDA, fails fast
+                            sh '''
+                            /kubeconform -strict -summary -schema-location default \
+                            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+                            rendered.yaml 
+                            '''
+                        }
+                        container('kube-linter') {
+                            sh '/kube-linter lint rendered.yaml --exclude latest-tag --exclude run-as-non-root --exclude read-only-root-filesystem'
+                        }
+                        container('kubectl') {
                             withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
                                 sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --dry-run=server --debug --namespace benl --set secretValue=$IMAGE_PULL_SECRET"
+                                sh 'rm -rf rendered.yaml'
                             }
                         }
                     }
