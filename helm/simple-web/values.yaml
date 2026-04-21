@@ -16,9 +16,19 @@ deploymentMemoryRequests: "64Mi"
 deploymentCpuLimits: "200m"
 deploymentMemoryLimits: "128Mi"
 
-# Rolling update
+# Rolling Update
 deploymentMaxSurge: "25%"
 deploymentMaxUnavailable: 0
+
+# Liveness and Readiness Probes
+livenessProbeInitialDelaySeconds: 15
+livenessProbePeriodSeconds: 10
+livenessProbePath: /
+livenessProbePort: 80
+readinessProbeInitialDelaySeconds: 5
+readinessProbePeriodSeconds: 5
+readinessProbePath: /
+readinessProbePort: 80
 
 #############
 # Pull Secret

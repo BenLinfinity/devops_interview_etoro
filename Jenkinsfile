@@ -49,7 +49,7 @@ spec:
                     steps {
                         container('kubectl') {
                             sh "kubectl config set-cluster aks --server=${env.AKS_SERVER} --insecure-skip-tls-verify=true"
-                            sh "kubectl config set-credentials msi-user --token=${env.KUBE_TOKEN}"
+                            sh "set +x && kubectl config set-credentials msi-user --token=${env.KUBE_TOKEN} && set -x"
                             sh "kubectl config set-context aks --cluster=aks --user=msi-user"
                             sh "kubectl config use-context aks"
                         }
@@ -63,7 +63,11 @@ spec:
                 stage('Lint') {
                     steps {
                         container('kubectl') {
-                            sh 'helm lint --strict ./helm/simple-web'
+                            sh 'helm lint --strict ./helm/simple-web' // Checks helm syntax and missing values
+                            sh 'helm template simple-web ./helm/simple-web | kubectl apply --dry-run=client --validate=strict -f -' // Checks rendered manifests for k8s syntax fails fast
+                            withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
+                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --dry-run=server --debug --namespace benl --set secretValue=$IMAGE_PULL_SECRET"
+                            }
                         }
                     }
                 }
@@ -71,7 +75,7 @@ spec:
                 stage('Safety Check') {
                     when { expression { params.ACTION == 'Destroy' } }
                     steps {
-                        input message: 'WARNING! You are about to destroy all resources managed by this pipeline. \
+                        input message: 'WARNING! You are about to destroy all resources managed by this pipeline! \
                         Are you sure?', ok:'YES, DESTROY'
                     }
                 }
@@ -80,7 +84,7 @@ spec:
                     when { expression { params.ACTION == 'Destroy' } }
                     steps {
                         container('kubectl') {
-                            sh "helm uninstall ${env.HELM_RELEASE_NAME} --namespace benl || true"
+                            sh "helm uninstall ${env.HELM_RELEASE_NAME} --namespace benl 2>&1 || true"
                         }
                     }
                 }
@@ -92,11 +96,19 @@ spec:
                                 input message: 'Deploy to cluster?', ok: 'Deploy'
                             }
                             withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
-                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --namespace benl --set secretValue=$IMAGE_PULL_SECRET"
+                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --namespace benl --wait --timeout 3m --rollback-on-failure --set secretValue=$IMAGE_PULL_SECRET"
                             }
                         }
                     }
                 }
+                // stage('Smoke Test') {
+                //     when { expression { params.ACTION == 'Deploy' } }
+                //     steps {
+                //         container('kubectl') {
+                //             sh "kubectl run curl --rm -i --restart=Never --image=curlimages/curl -- curl -s http://${env.HELM_RELEASE_NAME}.benl.svc.cluster.local:80/healthz"
+                //         }
+                //     }
+                // }
             }
         }
     }

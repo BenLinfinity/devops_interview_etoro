@@ -28,5 +28,19 @@ spec:
             limits:
               cpu: {{ .Values.deploymentCpuLimits }}
               memory: {{ .Values.deploymentMemoryLimits }}
+            livenessProbe:
+              httpGet:
+                path: {{ .Values.livenessProbePath }}
+                port: {{ .Values.livenessProbePort }}
+              initialDelaySeconds: {{ .Values.livenessProbeInitialDelaySeconds }}
+              periodSeconds: {{ .Values.livenessProbePeriodSeconds }}
+            readinessProbe:
+              httpGet:
+                path: {{ .Values.readinessProbePath }}
+                port: {{ .Values.readinessProbePort }}
+              initialDelaySeconds: {{ .Values.readinessProbeInitialDelaySeconds }}
+              periodSeconds: {{ .Values.readinessProbePeriodSeconds }}
+
+      
       imagePullSecrets:
       - name: {{ include "simple-web.imagePullSecretName" . }}
