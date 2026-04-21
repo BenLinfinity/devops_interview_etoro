@@ -3,6 +3,10 @@ pipeline {
         environment {
             AKS_SERVER = 'https://devops-interview-cnxosza8.hcp.westeurope.azmk8s.io:443'
             AKS_SERVER_ID = '6dae42f8-4368-4678-94ff-3960e28e3630'
+            HELM_RELEASE_NAME = 'simple-web'
+        }
+        parameters {
+            choice(name: 'ACTION', choices: ['Deploy','Destroy'])
         }
 
 
@@ -63,14 +67,32 @@ spec:
                         }
                     }
                 }
+
+                stage('Safety Check') {
+                    when { expression { params.ACTION == 'Destroy' } }
+                    steps {
+                        input message: 'WARNING! You are about to destroy all resources managed by this pipeline. \
+                        Are you sure?', ok:'YES, DESTROY'
+                    }
+                }
+
+                stage('Destroy') {
+                    when { expression { params.ACTION == 'Destroy' } }
+                    steps {
+                        container('kubectl') {
+                            sh "helm uninstall ${env.HELM_RELEASE_NAME} --namespace benl || true"
+                        }
+                    }
+                }
                 stage('Deploy') {
+                    when { expression { params.ACTION == 'Deploy' } }
                     steps {
                         container('kubectl') {
                             timeout(time: 24, unit: 'HOURS') {
                                 input message: 'Deploy to cluster?', ok: 'Deploy'
                             }
                             withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
-                            sh "helm upgrade --install simple-web ./helm/simple-web --namespace benl --set secretValue=$IMAGE_PULL_SECRET"
+                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --namespace benl --set secretValue=$IMAGE_PULL_SECRET"
                             }
                         }
                     }
