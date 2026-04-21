@@ -14,13 +14,17 @@ A pipeline encompassing the second half of a CI/CD lifecycle which delivers an a
     * Additional CPU scaling triggering at 70% to catch traffic spikes early and Memory scaling at 80% to avoid scaling up unnecessarily.
 - Jenkins Kubernetes cloud agent for build freshness and resource efficiency.
 - Continuous Delivery deploying only upon human intervention
+- Linting, Validation and Security scanning of helm chart using external tools (kubeconform, kube-linter)
+- Pipeline waits for Health check to respond before announcing success, fails after 3 minutes of waiting.
 
 **Environment:** To implement this project I worked on the Azure infrastructure provided. 
 - A single VM to be used as a jenkins controller bootstrapped with the necessary tools and permissions to access a cluster.
 - An AKS cluster with a bootstrapped dedicated namespace, pre-configured ingress controller.
 
-**Challenges:** Due to the limited permissions (single namespace, no access to Role and RoleBinding creation) I had to implement the cloud agent in an alternative method.
+**Challenges:** 
+- Due to the limited permissions (single namespace, no access to Role and RoleBinding creation) I had to implement the cloud agent in an alternative method.
 for this I used the permissions of the VM to generate a token in real time as a step in the pipeline and injected it as an pipeline environment variable to be used by the agent to authorize resource deployment.
+- Due to the provided container image having significant security flaws such as running as root and using port 80 internally (likely due to its age, image uses Python 2.7.14) implementing security best practices required allowing the container to run as root while minimizing its unnecessary capabilities by use of security context.
 
 **Steps taken to complete the task:**
 - I first researched about the tools I would need, Including KEDA az cli and kubelogin, the environment I would be working in (Azure) and its concepts.

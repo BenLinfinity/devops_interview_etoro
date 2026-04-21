@@ -2,6 +2,8 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: {{ include "simple-web.scaledObjectName" . }}
+  labels:
+    {{- include "simple-web.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     name: {{ include "simple-web.fullname" . }}

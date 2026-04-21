@@ -1,3 +1,4 @@
+
 pipeline {
     agent none
         environment {
@@ -73,7 +74,7 @@ spec:
                 stage('Lint and Validate') {
                     steps {
                         container('kubectl'){
-                            sh 'helm template simple-web ./helm/simple-web --set secretValue=FAKESECRET > rendered.yaml' // Renders the helm chart with fake values to check for syntax errors
+                            sh 'helm template simple-web ./helm/simple-web --set secretValue=FAKESECRET > rendered.yaml' // Renders the helm chart with fake value to check for syntax, schema, and security issues
                             sh 'helm lint --strict ./helm/simple-web' // Checks helm syntax and missing values
                         }
                         container('kubeconform') {
@@ -85,12 +86,13 @@ spec:
                             '''
                         }
                         container('kube-linter') {
-                            sh '/kube-linter lint rendered.yaml --exclude latest-tag --exclude run-as-non-root --exclude read-only-root-filesystem'
+                            // the app requires writing to its filesystem to maintain its counting mechanism, the image has only a latest tag available, the container must run as root due to exposing port 80
+                            sh '/kube-linter lint rendered.yaml --exclude latest-tag --exclude run-as-non-root --exclude no-read-only-root-fs'
+                            sh 'rm -rf rendered.yaml'
                         }
                         container('kubectl') {
                             withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
                                 sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --dry-run=server --debug --namespace benl --set secretValue=$IMAGE_PULL_SECRET"
-                                sh 'rm -rf rendered.yaml'
                             }
                         }
                     }
@@ -108,7 +110,15 @@ spec:
                     when { expression { params.ACTION == 'Destroy' } }
                     steps {
                         container('kubectl') {
-                            sh "helm uninstall ${env.HELM_RELEASE_NAME} --namespace benl 2>&1 || true"
+                            script {
+                                try {
+                                    sh "helm uninstall ${env.HELM_RELEASE_NAME} --namespace benl 2>&1 || true"
+                                } catch (err) {
+                                    env.ERROR_MESSAGE = err.getMessage()
+                                    echo "Error occurred while destroying resources: ${err}"
+                                    throw err
+                                }
+                            }
                         }
                     }
                 }
@@ -116,23 +126,44 @@ spec:
                     when { expression { params.ACTION == 'Deploy' } }
                     steps {
                         container('kubectl') {
-                            timeout(time: 24, unit: 'HOURS') {
-                                input message: 'Deploy to cluster?', ok: 'Deploy'
-                            }
-                            withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
-                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --namespace benl --wait --timeout 3m --rollback-on-failure --set secretValue=$IMAGE_PULL_SECRET"
+                            script {
+                                try {
+                                    timeout(time: 24, unit: 'HOURS') {
+                                        input message: 'Deploy to cluster?', ok: 'Deploy'
+                                    }
+                                    withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
+                                        sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --namespace benl --wait --timeout 3m --rollback-on-failure --set secretValue=$IMAGE_PULL_SECRET"
+                                    }
+                                } catch (err) {
+                                    env.ERROR_MESSAGE = err.getMessage()
+                                    echo "Deployment failed: ${err}"
+                                    throw err
+                                }
                             }
                         }
                     }
                 }
-                // stage('Smoke Test') {
-                //     when { expression { params.ACTION == 'Deploy' } }
-                //     steps {
-                //         container('kubectl') {
-                //             sh "kubectl run curl --rm -i --restart=Never --image=curlimages/curl -- curl -s http://${env.HELM_RELEASE_NAME}.benl.svc.cluster.local:80/healthz"
-                //         }
-                //     }
-                // }
+                stage('Smoke Test') {
+                    when { expression { params.ACTION == 'Deploy' } }
+                    steps {
+                        container('kubectl') {
+                            script {
+                                try {
+                                    
+                                        sh '''
+                                            PUBLIC_IP=$(kubectl get svc -n ingress -l "app.kubernetes.io/component=controller" -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
+                                            curl --retry 5 --retry-delay 5 -f http://${PUBLIC_IP}/benl/
+                                            '''
+                                } catch (err) {
+                                    env.ERROR_MESSAGE = err.getMessage()
+                                    echo "Smoke test failed: ${err}, rolling back deployment"
+                                    sh "helm rollback ${env.HELM_RELEASE_NAME} --namespace benl"
+                                    throw err 
+                                }
+                            }  
+                        }       
+                    }
+                }
             }
         }
     }

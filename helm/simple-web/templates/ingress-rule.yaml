@@ -2,6 +2,8 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "simple-web.fullname" . }}
+  labels:
+    {{- include "simple-web.labels" . | nindent 4 }}
   annotations:
     # app needs route "/" ingress needs "/benl"
     nginx.ingress.kubernetes.io/rewrite-target: {{ .Values.ingressTargetPath }}
