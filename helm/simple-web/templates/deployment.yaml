@@ -70,6 +70,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: {{ .Values.initAllowPrivilegeEscalation }}
             readOnlyRootFilesystem: {{ .Values.initReadOnlyRootFilesystem }}
+          # copies without restricted metadata such as permissions to allow the init container not to run as root
           command:
             - sh
             - -c

@@ -208,6 +208,14 @@ spec:
                     }
                 }
             }
+            post {
+                failure {
+                    echo "failed at stage ${env.FAILED_STAGE}"
+                }
+                always {
+                    cleanWs()
+                }
+            }
         }
     }
 }
