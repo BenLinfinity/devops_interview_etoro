@@ -24,7 +24,7 @@ A pipeline encompassing the second half of a CI/CD lifecycle which delivers an a
 **Challenges:** 
 - Due to the limited permissions (single namespace, no access to Role and RoleBinding creation) I had to implement the cloud agent in an alternative method.
 for this I used the permissions of the VM to generate a token in real time as a step in the pipeline and injected it as an pipeline environment variable to be used by the agent to authorize resource deployment.
-- Due to the provided container image having significant security flaws such as running as root and using port 80 internally (likely due to its age, image uses Python 2.7.14) implementing security best practices required allowing the container to run as root while minimizing its unnecessary capabilities by use of security context.
+- Due to the provided container image having significant security flaws such as running as root and using port 80 internally (likely due to its age, image uses Python 2.7.14) implementing security best practices and least privilege required changing the running user to uid 1000 and changing the container port to 3000. Since the container requires writing to a folder owned by root I used an Init Container to mount the required content as a volume and change the permissions and ownership of the volume to match uid 1000, this also allowed disabling writing to the root filesystem.
 
 **Steps taken to complete the task:**
 - I first researched about the tools I would need, Including KEDA az cli and kubelogin, the environment I would be working in (Azure) and its concepts.

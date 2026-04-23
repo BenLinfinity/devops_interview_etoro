@@ -8,32 +8,49 @@ imageTag: latest
 labels:
   app: simple-web
 
-appContainerPort: 80
+appContainerPort: 3000
 
-# Resources
-deploymentCpuRequests: "50m"
-deploymentMemoryRequests: "64Mi"
-deploymentCpuLimits: "200m"
-deploymentMemoryLimits: "128Mi"
-
-# Rolling Update
+# --- Rolling Update --- #
 deploymentMaxSurge: "25%"
 deploymentMaxUnavailable: 0
 
-# Liveness and Readiness Probes
+# --- Liveness and Readiness Probes --- #
 livenessProbeInitialDelaySeconds: 15
 livenessProbePeriodSeconds: 10
 livenessProbePath: /
-livenessProbePort: 80
+livenessProbePort: 3000
 readinessProbeInitialDelaySeconds: 5
 readinessProbePeriodSeconds: 5
 readinessProbePath: /
-readinessProbePort: 80
+readinessProbePort: 3000
+
+# --- App Container --- #
+# Resources
+appCpuRequests: "50m"
+appMemoryRequests: "64Mi"
+appCpuLimits: "200m"
+appMemoryLimits: "128Mi"
+
+# Command & Args
+appCommand: ["python", "index.py"]
+appArgs: ["0.0.0.0", "3000"]
+
+# Security Context
+appReadOnlyRootFilesystem: true
+appAllowPrivilegeEscalation: false
+appRunAsNonRoot: true
+appRunAsUser: 1000
+
+# --- Init Container --- #
+# Resources
+initCpuRequests: "10m"
+initMemoryRequests: "16Mi"
+initCpuLimits: "50m"
+initMemoryLimits: "64Mi"
 
 #############
 # Pull Secret
 #############
-secretSuffix: image-pull-secret
 secretType: kubernetes.io/dockerconfigjson
 
 #############
@@ -42,7 +59,7 @@ secretType: kubernetes.io/dockerconfigjson
 serviceName: simple-web
 serviceType: ClusterIP
 serviceClusterPort: 80
-serviceTargetPort: 80
+serviceTargetPort: 3000
 
 #############
 # Ingress

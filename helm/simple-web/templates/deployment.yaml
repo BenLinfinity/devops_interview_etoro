@@ -20,22 +20,22 @@ spec:
       containers:
         - name: {{ .Release.Name }}
           image: {{ .Values.imageRepository }}:{{ .Values.imageTag }}
+          command: {{ .Values.appCommand | toYaml | nindent 12 }}
+          args: {{ .Values.appArgs | toYaml | nindent 12 }}
           securityContext:
-            readOnlyRootFilesystem: false # the app requires writing data to implement its counter functionality.
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-              add: ["NET_BIND_SERVICE"] # Allows binding to port 80 without allowing the other unnecessary capabilities
+            readOnlyRootFilesystem: {{ .Values.appReadOnlyRootFilesystem }}
+            allowPrivilegeEscalation: {{ .Values.appAllowPrivilegeEscalation }}
+            runAsNonRoot: {{ .Values.appRunAsNonRoot }}
+            runAsUser: {{ .Values.appRunAsUser }}
           ports:
             - containerPort: {{ .Values.appContainerPort }}
-          # tighten later by using a busybox deployment to check actual resource usage
           resources:
             requests:
-              cpu: {{ .Values.deploymentCpuRequests }}
-              memory: {{ .Values.deploymentMemoryRequests }}
+              cpu: {{ .Values.appCpuRequests }}
+              memory: {{ .Values.appMemoryRequests }}
             limits:
-              cpu: {{ .Values.deploymentCpuLimits }}
-              memory: {{ .Values.deploymentMemoryLimits }}
+              cpu: {{ .Values.appCpuLimits }}
+              memory: {{ .Values.appMemoryLimits }}
           livenessProbe:
             httpGet:
               path: {{ .Values.livenessProbePath }}
@@ -48,7 +48,32 @@ spec:
               port: {{ .Values.readinessProbePort }}
             initialDelaySeconds: {{ .Values.readinessProbeInitialDelaySeconds }}
             periodSeconds: {{ .Values.readinessProbePeriodSeconds }}
-
-      
+          volumeMounts:
+            - name: code
+              mountPath: /code
+          
+      initContainers:
+        - name: init-{{ .Release.Name }}
+          image: {{ .Values.imageRepository }}:{{ .Values.imageTag }}
+          command:
+            - sh
+            - -c
+            - |
+              cp -a /code/. /shared-code && \
+              chmod -R 755 /shared-code && \
+              chown -R 1000:1000 /shared-code
+          resources:
+            requests:
+              cpu: {{ .Values.initCpuRequests }}
+              memory: {{ .Values.initMemoryRequests }}
+            limits:
+              cpu: {{ .Values.initCpuLimits }}
+              memory: {{ .Values.initMemoryLimits }}
+          volumeMounts:
+            - name: code
+              mountPath: /shared-code
       imagePullSecrets:
-      - name: {{ include "simple-web.imagePullSecretName" . }}
+        - name: {{ include "simple-web.imagePullSecretName" . }}
+      volumes:
+        - name: code
+          emptyDir: {}
