@@ -7,7 +7,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      {{- include "simple-web.labels" . | nindent 6 }}
+      {{- include "simple-web.selectorLabels" . | nindent 6 }}
   strategy:
     rollingUpdate:
       maxSurge: {{ .Values.deploymentMaxSurge}}
@@ -27,6 +27,7 @@ spec:
             allowPrivilegeEscalation: {{ .Values.appAllowPrivilegeEscalation }}
             runAsNonRoot: {{ .Values.appRunAsNonRoot }}
             runAsUser: {{ .Values.appRunAsUser }}
+            runAsGroup: {{ .Values.appRunAsGroup }}
           ports:
             - containerPort: {{ .Values.appContainerPort }}
           resources:
@@ -36,22 +37,30 @@ spec:
             limits:
               cpu: {{ .Values.appCpuLimits }}
               memory: {{ .Values.appMemoryLimits }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.startupProbePath }}
+              port: {{ .Values.startupProbePort }}
+            failureThreshold: {{ .Values.startupProbeFailureThreshold }}
+            periodSeconds: {{ .Values.startupProbePeriodSeconds }}
+
           livenessProbe:
             httpGet:
               path: {{ .Values.livenessProbePath }}
               port: {{ .Values.livenessProbePort }}
-            initialDelaySeconds: {{ .Values.livenessProbeInitialDelaySeconds }}
             periodSeconds: {{ .Values.livenessProbePeriodSeconds }}
+            failureThreshold: {{ .Values.livenessProbeFailureThreshold }}
+            timeoutSeconds: {{ .Values.livenessProbeTimeoutSeconds }}
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbePath }}
               port: {{ .Values.readinessProbePort }}
-            initialDelaySeconds: {{ .Values.readinessProbeInitialDelaySeconds }}
             periodSeconds: {{ .Values.readinessProbePeriodSeconds }}
+            failureThreshold: {{ .Values.readinessProbeFailureThreshold }}
+            timeoutSeconds: {{ .Values.readinessProbeTimeoutSeconds }}
           volumeMounts:
             - name: code
               mountPath: /code
-          
       initContainers:
         - name: init-{{ .Release.Name }}
           image: {{ .Values.imageRepository }}:{{ .Values.imageTag }}

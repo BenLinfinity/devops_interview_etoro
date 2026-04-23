@@ -29,6 +29,11 @@ app.kubernetes.io/instance: {{ include "simple-web.instance" .}}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
+{{- define "simple-web.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "simple-web.name" . }}
+app.kubernetes.io/instance: {{ include "simple-web.instance" .}}
+{{- end -}}
+
 {{/*
 Create the name for the image pull secret
 */}}

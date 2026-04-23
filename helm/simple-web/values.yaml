@@ -15,16 +15,26 @@ deploymentMaxSurge: "25%"
 deploymentMaxUnavailable: 0
 
 # --- Liveness and Readiness Probes --- #
-livenessProbeInitialDelaySeconds: 15
+
+startupProbeFailureThreshold: 6
+startupProbePeriodSeconds: 5
+startupProbePath: /
+startupProbePort: 3000
+
 livenessProbePeriodSeconds: 10
+livenessProbeFailureThreshold: 3
+livenessProbeTimeoutSeconds: 2
 livenessProbePath: /
 livenessProbePort: 3000
-readinessProbeInitialDelaySeconds: 5
+
 readinessProbePeriodSeconds: 5
+readinessProbeFailureThreshold: 3
+readinessProbeTimeoutSeconds: 2
 readinessProbePath: /
 readinessProbePort: 3000
 
 # --- App Container --- #
+
 # Resources
 appCpuRequests: "50m"
 appMemoryRequests: "64Mi"
@@ -40,8 +50,10 @@ appReadOnlyRootFilesystem: true
 appAllowPrivilegeEscalation: false
 appRunAsNonRoot: true
 appRunAsUser: 1000
+appRunAsGroup: 1000
 
 # --- Init Container --- #
+
 # Resources
 initCpuRequests: "10m"
 initMemoryRequests: "16Mi"

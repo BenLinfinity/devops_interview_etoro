@@ -16,6 +16,7 @@ pipeline {
             agent { label 'built-in' }
             steps {
                 script {
+                    env.FAILED_STAGE = "Get Token"
                     env.KUBE_TOKEN = sh(
                         script: "az account get-access-token --resource ${env.AKS_SERVER_ID} --query accessToken -o tsv",
                         returnStdout: true
@@ -33,24 +34,65 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 2000
+    runAsNonRoot: true
   containers:
   - name: jnlp
     image: 'jenkins/inbound-agent:3355.v388858a_47b_33-19-jdk21'
+    securityContext:
+      allowPrivilegeEscalation: false
+    resources:
+      requests:
+        cpu: '100m'
+        memory: '256Mi'
+      limits:
+        cpu: '500m'
+        memory: '512Mi'
   - name: kubectl
     image: 'alpine/k8s:1.35.0'
+    securityContext:
+      allowPrivilegeEscalation: false
     command:
     - cat
     tty: true
+    resources:
+      requests:
+        cpu: '100m'
+        memory: '256Mi'
+      limits:
+        cpu: '500m'
+        memory: '512Mi'
   - name: kubeconform
     image: 'ghcr.io/yannh/kubeconform:v0.7.0-alpine'
+    securityContext:
+      allowPrivilegeEscalation: false
     command:
     - cat
     tty: true
+    resources:
+      requests:
+        cpu: '50m'
+        memory: '64Mi'
+      limits:
+        cpu: '200m'
+        memory: '128Mi'
   - name: kube-linter
     image: 'stackrox/kube-linter:v0.8.3-alpine'
+    securityContext:
+      allowPrivilegeEscalation: false
     command:
     - cat
     tty: true
+    resources:
+      requests:
+        cpu: '50m'
+        memory: '64Mi'
+      limits:
+        cpu: '200m'
+        memory: '128Mi'
 """
                 }
             }
@@ -59,6 +101,7 @@ spec:
                 stage('Configure Permissions') {
                     steps {
                         container('kubectl') {
+                            script { env.FAILED_STAGE = "Configure Permissions" }
                             sh "kubectl config set-cluster aks --server=${env.AKS_SERVER} --insecure-skip-tls-verify=true"
                             sh "set +x && kubectl config set-credentials msi-user --token=${env.KUBE_TOKEN} && set -x"
                             sh "kubectl config set-context aks --cluster=aks --user=msi-user"
@@ -68,12 +111,16 @@ spec:
                 }
                 stage('SCM Checkout') {
                     steps {
-                        checkout scm
+                        container('jnlp') {
+                            script { env.FAILED_STAGE = "SCM Checkout" }
+                            checkout scm
+                        }
                     }
                 }
                 stage('Lint and Validate') {
                     steps {
                         container('kubectl'){
+                            script { env.FAILED_STAGE = "Lint and Validate" }
                             sh 'helm template simple-web ./helm/simple-web --set secretValue=FAKESECRET > rendered.yaml' // Renders the helm chart with fake value to check for syntax, schema, and security issues
                             sh 'helm lint --strict ./helm/simple-web' // Checks helm syntax and missing values
                         }
@@ -101,8 +148,11 @@ spec:
                 stage('Safety Check') {
                     when { expression { params.ACTION == 'Destroy' } }
                     steps {
-                        input message: 'WARNING! You are about to destroy all resources managed by this pipeline! \
-                        Are you sure?', ok:'YES, DESTROY'
+                        container('jnlp') {
+                            script { env.FAILED_STAGE = "Safety Check" }
+                            input message: 'WARNING! You are about to destroy all resources managed by this pipeline! \
+                            Are you sure?', ok:'YES, DESTROY'
+                        }
                     }
                 }
 
@@ -110,15 +160,8 @@ spec:
                     when { expression { params.ACTION == 'Destroy' } }
                     steps {
                         container('kubectl') {
-                            script {
-                                try {
-                                    sh "helm uninstall ${env.HELM_RELEASE_NAME} --namespace benl 2>&1 || true"
-                                } catch (err) {
-                                    env.ERROR_MESSAGE = err.getMessage()
-                                    echo "Error occurred while destroying resources: ${err}"
-                                    throw err
-                                }
-                            }
+                            script { env.FAILED_STAGE = "Destroy" }
+                            sh "helm uninstall ${env.HELM_RELEASE_NAME} --namespace benl 2>&1 || true"
                         }
                     }
                 }
@@ -126,19 +169,12 @@ spec:
                     when { expression { params.ACTION == 'Deploy' } }
                     steps {
                         container('kubectl') {
-                            script {
-                                try {
-                                    timeout(time: 24, unit: 'HOURS') {
-                                        input message: 'Deploy to cluster?', ok: 'Deploy'
-                                    }
-                                    withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
-                                        sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --namespace benl --wait --timeout 3m --rollback-on-failure --set secretValue=$IMAGE_PULL_SECRET"
-                                    }
-                                } catch (err) {
-                                    env.ERROR_MESSAGE = err.getMessage()
-                                    echo "Deployment failed: ${err}"
-                                    throw err
-                                }
+                            script { env.FAILED_STAGE = "Deploy" }
+                            timeout(time: 24, unit: 'HOURS') {
+                                input message: 'Deploy to cluster?', ok: 'Deploy'
+                            }
+                            withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
+                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --namespace benl --wait --timeout 3m --rollback-on-failure --set secretValue=$IMAGE_PULL_SECRET"
                             }
                         }
                     }
@@ -148,17 +184,15 @@ spec:
                     steps {
                         container('kubectl') {
                             script {
+                                env.FAILED_STAGE = "Smoke Test"
                                 try {
-                                    
-                                        sh '''
-                                            PUBLIC_IP=$(kubectl get svc -n ingress -l "app.kubernetes.io/component=controller" -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
-                                            curl --retry 5 --retry-delay 5 -f http://${PUBLIC_IP}/benl/
-                                            '''
+                                    sh '''
+                                        PUBLIC_IP=$(kubectl get svc -n ingress -l "app.kubernetes.io/component=controller" -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
+                                        curl --retry 5 --retry-delay 5 -f http://${PUBLIC_IP}/benl/
+                                        '''
                                 } catch (err) {
-                                    env.ERROR_MESSAGE = err.getMessage()
-                                    echo "Smoke test failed: ${err}, rolling back deployment"
-                                    sh "helm rollback ${env.HELM_RELEASE_NAME} --namespace benl"
-                                    throw err 
+                                    echo "Smoke test failed rolling back deployment"
+                                    sh "helm rollback ${env.HELM_RELEASE_NAME} --namespace benl" 
                                 }
                             }  
                         }       
