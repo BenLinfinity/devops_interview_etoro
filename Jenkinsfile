@@ -55,6 +55,12 @@ spec:
     image: 'alpine/k8s:1.35.0'
     securityContext:
       allowPrivilegeEscalation: false
+    env:
+      - name: HOME
+        value: /tmp/kube
+    volumeMounts:
+      - name: tmp-home
+        mountPath: /tmp/kube
     command:
     - cat
     tty: true
@@ -93,6 +99,9 @@ spec:
       limits:
         cpu: '200m'
         memory: '128Mi'
+  volumes:
+    - name: tmp-home
+      emptyDir: {}
 """
                 }
             }
@@ -134,7 +143,7 @@ spec:
                         }
                         container('kube-linter') {
                             // the app requires writing to its filesystem to maintain its counting mechanism, the image has only a latest tag available, the container must run as root due to exposing port 80
-                            sh '/kube-linter lint rendered.yaml --exclude latest-tag --exclude run-as-non-root --exclude no-read-only-root-fs'
+                            sh '/kube-linter lint rendered.yaml --exclude latest-tag'
                             sh 'rm -rf rendered.yaml'
                         }
                         container('kubectl') {

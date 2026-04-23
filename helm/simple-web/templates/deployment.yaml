@@ -17,17 +17,20 @@ spec:
       labels:
         {{- include "simple-web.labels" . | nindent 8 }}
     spec:
+      securityContext:
+            runAsNonRoot: {{ .Values.containersRunAsNonRoot }}
+            runAsUser: {{ .Values.containersRunAsUser }}
+            runAsGroup: {{ .Values.containersRunAsGroup }}
+            fsGroup: {{ .Values.containersFsGroup }}
       containers:
         - name: {{ .Release.Name }}
           image: {{ .Values.imageRepository }}:{{ .Values.imageTag }}
+          securityContext:
+            allowPrivilegeEscalation: {{ .Values.appAllowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.appReadOnlyRootFilesystem }}
           command: {{ .Values.appCommand | toYaml | nindent 12 }}
           args: {{ .Values.appArgs | toYaml | nindent 12 }}
-          securityContext:
-            readOnlyRootFilesystem: {{ .Values.appReadOnlyRootFilesystem }}
-            allowPrivilegeEscalation: {{ .Values.appAllowPrivilegeEscalation }}
-            runAsNonRoot: {{ .Values.appRunAsNonRoot }}
-            runAsUser: {{ .Values.appRunAsUser }}
-            runAsGroup: {{ .Values.appRunAsGroup }}
+          
           ports:
             - containerPort: {{ .Values.appContainerPort }}
           resources:
@@ -64,13 +67,13 @@ spec:
       initContainers:
         - name: init-{{ .Release.Name }}
           image: {{ .Values.imageRepository }}:{{ .Values.imageTag }}
+          securityContext:
+            allowPrivilegeEscalation: {{ .Values.initAllowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.initReadOnlyRootFilesystem }}
           command:
             - sh
             - -c
-            - |
-              cp -a /code/. /shared-code && \
-              chmod -R 755 /shared-code && \
-              chown -R 1000:1000 /shared-code
+            - cp -rT /code/ /shared-code
           resources:
             requests:
               cpu: {{ .Values.initCpuRequests }}

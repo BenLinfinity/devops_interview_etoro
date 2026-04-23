@@ -33,6 +33,13 @@ readinessProbeTimeoutSeconds: 2
 readinessProbePath: /
 readinessProbePort: 3000
 
+
+# --- Containers Security Context --- #
+containersRunAsNonRoot: true
+containersRunAsUser: 1000
+containersRunAsGroup: 1000
+containersFsGroup: 1000
+
 # --- App Container --- #
 
 # Resources
@@ -46,11 +53,8 @@ appCommand: ["python", "index.py"]
 appArgs: ["0.0.0.0", "3000"]
 
 # Security Context
-appReadOnlyRootFilesystem: true
 appAllowPrivilegeEscalation: false
-appRunAsNonRoot: true
-appRunAsUser: 1000
-appRunAsGroup: 1000
+appReadOnlyRootFilesystem: true
 
 # --- Init Container --- #
 
@@ -59,6 +63,10 @@ initCpuRequests: "10m"
 initMemoryRequests: "16Mi"
 initCpuLimits: "50m"
 initMemoryLimits: "64Mi"
+
+# Security Context
+initAllowPrivilegeEscalation: false
+initReadOnlyRootFilesystem: true
 
 #############
 # Pull Secret
