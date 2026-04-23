@@ -23,6 +23,11 @@ pipeline {
                         ).trim()
                 }
             }
+            post {
+                always {
+                    cleanWs()
+                }
+            }
         }
 
         stage ('Pipeline') {

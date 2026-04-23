@@ -27,6 +27,7 @@ used to label items with tags by chart, release, management tool
 app.kubernetes.io/name: {{ include "simple-web.name" . }}
 app.kubernetes.io/instance: {{ include "simple-web.instance" .}}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/component: {{ .Values.componentLabel | default "web"}}
 {{- end -}}
 
 {{- define "simple-web.selectorLabels" -}}

@@ -62,8 +62,12 @@ spec:
             failureThreshold: {{ .Values.readinessProbeFailureThreshold }}
             timeoutSeconds: {{ .Values.readinessProbeTimeoutSeconds }}
           volumeMounts:
-            - name: code
-              mountPath: /code
+            - name: shared-data
+              mountPath: /code/index.html
+              subPath: index.html
+            - name: shared-data
+              mountPath: /code/pickle_data.txt
+              subPath: pickle_data.txt
       initContainers:
         - name: init-{{ .Release.Name }}
           image: {{ .Values.imageRepository }}:{{ .Values.imageTag }}
@@ -74,7 +78,7 @@ spec:
           command:
             - sh
             - -c
-            - cp -rT /code/ /shared-code
+            - touch /data/pickle_data.txt && touch /data/index.html
           resources:
             requests:
               cpu: {{ .Values.initCpuRequests }}
@@ -83,10 +87,12 @@ spec:
               cpu: {{ .Values.initCpuLimits }}
               memory: {{ .Values.initMemoryLimits }}
           volumeMounts:
-            - name: code
-              mountPath: /shared-code
+            - name: shared-data
+              mountPath: /data
       imagePullSecrets:
         - name: {{ include "simple-web.imagePullSecretName" . }}
       volumes:
-        - name: code
-          emptyDir: {}
+        - name: shared-data
+          persistentVolumeClaim:
+            claimName: {{ include "simple-web.fullname" . }}
+            

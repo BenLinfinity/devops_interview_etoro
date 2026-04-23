@@ -32,3 +32,4 @@ for this I used the permissions of the VM to generate a token in real time as a 
 - After this I created a plan which included the Jenkins and Kubernetes mechanisms I would need to utilize and the features I would like to implement.
 - I then started implementing beginning with creating a helm chart with resources such as deployment, ClusterIP service, image pull secret, KEDA and ingress rules. I focused on making the helm charts modular to enable reusability using templating and helpers, proper labeling for versatile search and filter, and ensuring security best practices by injecting sensitive values in real time using an external secret (Jenkins) and ensuring all containers run as dedicated users rather than root. 
 
+

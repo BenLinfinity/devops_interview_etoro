@@ -101,3 +101,9 @@ kedaCronTriggerStart: "0 8 * * *"
 kedaCronTriggerEnd: "0 00 * * *"
 kedaCronTriggerDesiredReplicas: "5"
 
+#######
+# PVC
+#######
+pvcStorageClass: azurefile-csi
+pvcStorageAmount: 2Gi
+
