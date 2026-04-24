@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "simple-web.fullname" . }}
+  labels:
+    {{- include "simple-web.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "simple-web.selectorLabels" . | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{ .Values.deploymentMaxSurge}}
+      maxUnavailable: {{ .Values.deploymentMaxUnavailable}}
+  template:
+    metadata:
+      labels:
+        {{- include "simple-web.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+            runAsNonRoot: {{ .Values.containersRunAsNonRoot }}
+            runAsUser: {{ .Values.containersRunAsUser }}
+            runAsGroup: {{ .Values.containersRunAsGroup }}
+            fsGroup: {{ .Values.containersFsGroup }}
+      containers:
+        - name: {{ .Release.Name }}
+          image: {{ .Values.imageRepository }}:{{ .Values.imageTag }}
+          securityContext:
+            allowPrivilegeEscalation: {{ .Values.appAllowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.appReadOnlyRootFilesystem }}
+          command: {{ .Values.appCommand | toYaml | nindent 12 }}
+          args: {{ .Values.appArgs | toYaml | nindent 12 }}
+          
+          ports:
+            - containerPort: {{ .Values.appContainerPort }}
+          resources:
+            requests:
+              cpu: {{ .Values.appCpuRequests }}
+              memory: {{ .Values.appMemoryRequests }}
+            limits:
+              cpu: {{ .Values.appCpuLimits }}
+              memory: {{ .Values.appMemoryLimits }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.startupProbePath }}
+              port: {{ .Values.startupProbePort }}
+            failureThreshold: {{ .Values.startupProbeFailureThreshold }}
+            periodSeconds: {{ .Values.startupProbePeriodSeconds }}
+
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbePath }}
+              port: {{ .Values.livenessProbePort }}
+            periodSeconds: {{ .Values.livenessProbePeriodSeconds }}
+            failureThreshold: {{ .Values.livenessProbeFailureThreshold }}
+            timeoutSeconds: {{ .Values.livenessProbeTimeoutSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbePath }}
+              port: {{ .Values.readinessProbePort }}
+            periodSeconds: {{ .Values.readinessProbePeriodSeconds }}
+            failureThreshold: {{ .Values.readinessProbeFailureThreshold }}
+            timeoutSeconds: {{ .Values.readinessProbeTimeoutSeconds }}
+          volumeMounts:
+            - name: shared-data
+              mountPath: /code/index.html
+              subPath: index.html
+            - name: shared-data
+              mountPath: /code/pickle_data.txt
+              subPath: pickle_data.txt
+      initContainers:
+        - name: init-{{ .Release.Name }}
+          image: {{ .Values.imageRepository }}:{{ .Values.imageTag }}
+          securityContext:
+            allowPrivilegeEscalation: {{ .Values.initAllowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.initReadOnlyRootFilesystem }}
+          # copies without restricted metadata such as permissions to allow the init container not to run as root
+          command:
+            - sh
+            - -c
+            - touch /data/pickle_data.txt && touch /data/index.html
+          resources:
+            requests:
+              cpu: {{ .Values.initCpuRequests }}
+              memory: {{ .Values.initMemoryRequests }}
+            limits:
+              cpu: {{ .Values.initCpuLimits }}
+              memory: {{ .Values.initMemoryLimits }}
+          volumeMounts:
+            - name: shared-data
+              mountPath: /data
+      imagePullSecrets:
+        - name: {{ include "simple-web.imagePullSecretName" . }}
+      volumes:
+        - name: shared-data
+          persistentVolumeClaim:
+            claimName: {{ include "simple-web.fullname" . }}
+            

@@ -1,0 +1,109 @@
+#############
+# Deployment
+#############
+
+replicaCount: 2 
+imageRepository: acrinterview.azurecr.io/simple-web
+imageTag: latest
+labels:
+  app: simple-web
+
+appContainerPort: 3000
+
+# --- Rolling Update --- #
+deploymentMaxSurge: "25%"
+deploymentMaxUnavailable: 0
+
+# --- Liveness and Readiness Probes --- #
+
+startupProbeFailureThreshold: 6
+startupProbePeriodSeconds: 5
+startupProbePath: /
+startupProbePort: 3000
+
+livenessProbePeriodSeconds: 10
+livenessProbeFailureThreshold: 3
+livenessProbeTimeoutSeconds: 2
+livenessProbePath: /
+livenessProbePort: 3000
+
+readinessProbePeriodSeconds: 5
+readinessProbeFailureThreshold: 3
+readinessProbeTimeoutSeconds: 2
+readinessProbePath: /
+readinessProbePort: 3000
+
+
+# --- Containers Security Context --- #
+containersRunAsNonRoot: true
+containersRunAsUser: 1000
+containersRunAsGroup: 1000
+containersFsGroup: 1000
+
+# --- App Container --- #
+
+# Resources
+appCpuRequests: "50m"
+appMemoryRequests: "64Mi"
+appCpuLimits: "200m"
+appMemoryLimits: "128Mi"
+
+# Command & Args
+appCommand: ["python", "index.py"]
+appArgs: ["0.0.0.0", "3000"]
+
+# Security Context
+appAllowPrivilegeEscalation: false
+appReadOnlyRootFilesystem: true
+
+# --- Init Container --- #
+
+# Resources
+initCpuRequests: "10m"
+initMemoryRequests: "16Mi"
+initCpuLimits: "50m"
+initMemoryLimits: "64Mi"
+
+# Security Context
+initAllowPrivilegeEscalation: false
+initReadOnlyRootFilesystem: true
+
+#############
+# Pull Secret
+#############
+secretType: kubernetes.io/dockerconfigjson
+
+#############
+# Service
+#############
+serviceName: simple-web
+serviceType: ClusterIP
+serviceClusterPort: 80
+serviceTargetPort: 3000
+
+#############
+# Ingress
+#############
+ingressClassName: nginx
+ingressRulePath: /benl
+ingressRulePathType: Prefix
+ingressTargetPath: /
+
+#################
+# KEDA Autoscaler
+#################
+kedaMinReplicaCount: 2
+kedaMaxReplicaCount: 10
+kedaCpuTriggerValue: "70"
+kedaMemoryTriggerValue: "80"
+kedaCronTriggerTimezone: "Asia/Jerusalem"
+kedaCronTriggerStart: "0 8 * * *"
+kedaCronTriggerEnd: "0 00 * * *"
+kedaCronTriggerDesiredReplicas: "5"
+
+#######
+# PVC
+#######
+pvcStorageClass: azurefile-csi
+pvcStorageAmount: 2Gi
+
