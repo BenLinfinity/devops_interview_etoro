@@ -123,7 +123,8 @@ spec:
                         }
                     }
                 }
-                stage('SCM Checkout') {
+                stage('Checkout SCM') {
+                    when { expression { params.ACTION == 'Deploy' } }
                     steps {
                         container('jnlp') {
                             script { env.FAILED_STAGE = "SCM Checkout" }
@@ -132,14 +133,18 @@ spec:
                     }
                 }
                 stage('Lint and Validate') {
+                    when { expression { params.ACTION == 'Deploy' } }
                     steps {
                         container('kubectl'){
                             script { env.FAILED_STAGE = "Lint and Validate" }
-                            sh 'helm template simple-web ./helm/simple-web --set secretValue=FAKESECRET > rendered.yaml' // Renders the helm chart with fake value to check for syntax, schema, and security issues
-                            sh 'helm lint --strict ./helm/simple-web' // Checks helm syntax and missing values
+                            // Renders the helm chart with fake value to check for syntax, schema, and security issues
+                            sh 'helm template simple-web ./JenkinsPipeline/helm/simple-web --set secretValue=FAKESECRET > rendered.yaml'
+                            
+                            // Checks helm syntax and missing values
+                            sh 'helm lint --strict ./JenkinsPipeline/helm/simple-web'
                         }
                         container('kubeconform') {
-                            // Checks rendered manifests for k8s syntax, and schemas including custom KEDA, fails fast
+                            // Checks rendered manifests for kubernetes syntax, and schemas including custom KEDA from a public github CRD schema repo
                             sh '''
                             /kubeconform -strict -summary -schema-location default \
                             -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
@@ -147,13 +152,14 @@ spec:
                             '''
                         }
                         container('kube-linter') {
-                            // the app requires writing to its filesystem to maintain its counting mechanism, the image has only a latest tag available, the container must run as root due to exposing port 80
+                            // the image has only a latest tag available
                             sh '/kube-linter lint rendered.yaml --exclude latest-tag'
                             sh 'rm -rf rendered.yaml'
                         }
                         container('kubectl') {
                             withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
-                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --dry-run=server --debug --namespace benl --set secretValue=$IMAGE_PULL_SECRET"
+                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./JenkinsPipeline/helm/simple-web --dry-run=server --debug \
+                                --namespace benl --set secretValue=$IMAGE_PULL_SECRET"
                             }
                         }
                     }
@@ -188,7 +194,8 @@ spec:
                                 input message: 'Deploy to cluster?', ok: 'Deploy'
                             }
                             withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
-                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./helm/simple-web --namespace benl --wait --timeout 3m --rollback-on-failure --set secretValue=$IMAGE_PULL_SECRET"
+                                sh "helm upgrade --install ${env.HELM_RELEASE_NAME} ./JenkinsPipeline/helm/simple-web --namespace benl --wait --timeout 3m \
+                                --rollback-on-failure --set secretValue=$IMAGE_PULL_SECRET"
                             }
                         }
                     }
