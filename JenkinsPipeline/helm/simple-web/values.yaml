@@ -1,8 +1,7 @@
 #############
 # Deployment
 #############
-
-replicaCount: 2 
+ 
 imageRepository: acrinterview.azurecr.io/simple-web
 imageTag: latest
 labels:
@@ -98,7 +97,7 @@ kedaCpuTriggerValue: "70"
 kedaMemoryTriggerValue: "80"
 kedaCronTriggerTimezone: "Asia/Jerusalem"
 kedaCronTriggerStart: "0 8 * * *"
-kedaCronTriggerEnd: "0 00 * * *"
+kedaCronTriggerEnd: "0 0 * * *"
 kedaCronTriggerDesiredReplicas: "5"
 
 #######

@@ -7,7 +7,7 @@ metadata:
 spec:
   type: {{ .Values.serviceType }}
   selector:
-    {{- include "simple-web.labels" . | nindent 4 }}
+    {{- include "simple-web.selectorLabels" . | nindent 4 }}
   ports:
     - port: {{ .Values.serviceClusterPort }}
       targetPort: {{ .Values.serviceTargetPort }}
