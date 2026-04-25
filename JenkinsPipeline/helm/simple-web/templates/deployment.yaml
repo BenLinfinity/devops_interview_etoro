@@ -18,10 +18,10 @@ spec:
         {{- include "simple-web.labels" . | nindent 8 }}
     spec:
       securityContext:
-            runAsNonRoot: {{ .Values.containersRunAsNonRoot }}
-            runAsUser: {{ .Values.containersRunAsUser }}
-            runAsGroup: {{ .Values.containersRunAsGroup }}
-            fsGroup: {{ .Values.containersFsGroup }}
+        runAsNonRoot: {{ .Values.containersRunAsNonRoot }}
+        runAsUser: {{ .Values.containersRunAsUser }}
+        runAsGroup: {{ .Values.containersRunAsGroup }}
+        fsGroup: {{ .Values.containersFsGroup }}
       containers:
         - name: {{ .Release.Name }}
           image: {{ .Values.imageRepository }}:{{ .Values.imageTag }}
@@ -74,7 +74,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: {{ .Values.initAllowPrivilegeEscalation }}
             readOnlyRootFilesystem: {{ .Values.initReadOnlyRootFilesystem }}
-          # copies without restricted metadata such as permissions to allow the init container not to run as root
+          # creates necessarry files for the app to write to on the PV
           command:
             - sh
             - -c

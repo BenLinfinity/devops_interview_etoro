@@ -116,7 +116,8 @@ spec:
                     steps {
                         container('kubectl') {
                             script { env.FAILED_STAGE = "Configure Permissions" }
-                            sh "kubectl config set-cluster aks --server=${env.AKS_SERVER} --insecure-skip-tls-verify=true"
+                            // pod communicates with cluster internally
+                            sh "kubectl config set-cluster aks --server=https://$KUBERNETES_SERVICE_HOST --insecure-skip-tls-verify=true"
                             sh "set +x && kubectl config set-credentials msi-user --token=${env.KUBE_TOKEN} && set -x"
                             sh "kubectl config set-context aks --cluster=aks --user=msi-user"
                             sh "kubectl config use-context aks"
@@ -190,7 +191,7 @@ spec:
                     steps {
                         container('kubectl') {
                             script { env.FAILED_STAGE = "Deploy" }
-                            timeout(time: 24, unit: 'HOURS') {
+                            timeout(time: 30, unit: 'MINUTES') {
                                 input message: 'Deploy to cluster?', ok: 'Deploy'
                             }
                             withCredentials([string(credentialsId: 'image-pull-secret', variable: 'IMAGE_PULL_SECRET')]) {
@@ -214,6 +215,7 @@ spec:
                                 } catch (err) {
                                     echo "Smoke test failed rolling back deployment"
                                     sh "helm rollback ${env.HELM_RELEASE_NAME} --namespace benl" 
+                                    throw err
                                 }
                             }  
                         }       
