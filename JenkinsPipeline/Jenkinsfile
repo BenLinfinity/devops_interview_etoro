@@ -117,7 +117,8 @@ spec:
                         container('kubectl') {
                             script { env.FAILED_STAGE = "Configure Permissions" }
                             // pod communicates with cluster internally
-                            sh "kubectl config set-cluster aks --server=https://$KUBERNETES_SERVICE_HOST --insecure-skip-tls-verify=true"
+                            def caCert = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+                            sh "kubectl config set-cluster aks --server=https://$KUBERNETES_SERVICE_HOST --certificate-authority=$caCert"
                             sh "set +x && kubectl config set-credentials msi-user --token=${env.KUBE_TOKEN} && set -x"
                             sh "kubectl config set-context aks --cluster=aks --user=msi-user"
                             sh "kubectl config use-context aks"
