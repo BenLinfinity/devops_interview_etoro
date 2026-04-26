@@ -5,6 +5,7 @@ pipeline {
             AKS_SERVER = 'https://devops-interview-cnxosza8.hcp.westeurope.azmk8s.io:443'
             AKS_SERVER_ID = '6dae42f8-4368-4678-94ff-3960e28e3630'
             HELM_RELEASE_NAME = 'simple-web'
+            
         }
         parameters {
             choice(name: 'ACTION', choices: ['Deploy','Destroy'])
@@ -117,10 +118,9 @@ spec:
                         container('kubectl') {
                             script {
                                 env.FAILED_STAGE = "Configure Permissions" 
-                                def caCert = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
                             }
                             // pod communicates with cluster internally
-                            sh "kubectl config set-cluster aks --server=https://$KUBERNETES_SERVICE_HOST --certificate-authority=$caCert"
+                            sh "kubectl config set-cluster aks --server=https://$KUBERNETES_SERVICE_HOST --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
                             sh "set +x && kubectl config set-credentials msi-user --token=${env.KUBE_TOKEN} && set -x"
                             sh "kubectl config set-context aks --cluster=aks --user=msi-user"
                             sh "kubectl config use-context aks"
